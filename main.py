@@ -1,55 +1,73 @@
+import streamlit as st
+
+# 🏦 Bank Account Class (OOP)
 class BankAccount:
     def __init__(self, name, acc_number, balance=0):
-        
-        """Constructor method to initialize account details.
-        Parameters:
-        name (str): Account holder's name
-        acc_number (str): Account number
-        balance (float): Initial balance (default is 0)"""
-        
+        """Initialize account details."""
         self.name = name
         self.acc_number = acc_number
         self.balance = balance
 
     def deposit(self, amount):
-        
-        """Deposit a certain amount into the account.
-        
-        Parameters:
-        amount (float): Amount to be deposited"""
-        
-        self.balance += amount  # Add amount to balance
-        print(f"Deposited ₹{amount}. New Balance: ₹{self.balance}")
+        """Deposit money into the account."""
+        self.balance += amount
+        return f"✅ Deposited ₹{amount}. New Balance: ₹{self.balance}"
 
     def withdraw(self, amount):
-        
-        """Withdraw a certain amount from the account if enough balance is available.
-        
-        Parameters:
-        amount (float): Amount to be withdrawn"""
-        
+        """Withdraw money if sufficient balance exists."""
         if amount <= self.balance:
-            self.balance -= amount  # Deduct amount from balance
-            print(f"Withdrew ₹{amount}. New Balance: ₹{self.balance}")
+            self.balance -= amount
+            return f"💸 Withdrew ₹{amount}. New Balance: ₹{self.balance}"
         else:
-            print("❌ Insufficient Balance!")  # Error message if not enough balance
+            return "❌ Insufficient Balance!"
 
     def show_balance(self):
-        """Display the current account balance."""
-        print(f"{self.name}'s Account Balance: ₹{self.balance}")
+        """Return current balance."""
+        return f"📌 {self.name}'s Account Balance: ₹{self.balance}"
 
 
-# Creating a Bank Account object for 'Tejal'
-acc = BankAccount("Tejal", "1234567890", 5000)  # Initial balance: ₹5000
+# ---------------------------
+# STREAMLIT APP START
+# ---------------------------
+st.set_page_config(page_title="Bank Account System", page_icon="🏦")
 
-# Step 1: Show current balance
-acc.show_balance()
+st.title("🏦 Simple Bank Account System")
+st.write("A small interactive app to simulate deposits, withdrawals, and balance checks.")
 
-# Step 2: Deposit ₹1500
-acc.deposit(1500)
+# Store account object in session state so it persists
+if "account" not in st.session_state:
+    st.session_state.account = None
 
-# Step 3: Withdraw ₹500
-acc.withdraw(500)
+# Create account form
+if st.session_state.account is None:
+    st.subheader("Create Your Bank Account")
+    name = st.text_input("Enter Account Holder Name")
+    acc_number = st.text_input("Enter Account Number")
+    balance = st.number_input("Initial Balance (₹)", min_value=0, value=0, step=100)
 
-# Final balance will be displayed after each transaction
+    if st.button("Create Account"):
+        if name and acc_number:
+            st.session_state.account = BankAccount(name, acc_number, balance)
+            st.success(f"✅ Account created for {name} with balance ₹{balance}")
+        else:
+            st.warning("Please enter both name and account number.")
 
+# Show account actions if account exists
+else:
+    st.subheader(f"Welcome, {st.session_state.account.name}!")
+    st.write(st.session_state.account.show_balance())
+
+    # Deposit money
+    st.write("### 💰 Deposit Money")
+    deposit_amount = st.number_input("Enter amount to deposit", min_value=0, value=0, step=100)
+    if st.button("Deposit"):
+        if deposit_amount > 0:
+            result = st.session_state.account.deposit(deposit_amount)
+            st.success(result)
+        else:
+            st.warning("Please enter an amount greater than ₹0.")
+
+    # Withdraw money
+    st.write("### 💸 Withdraw Money")
+    withdraw_amount = st.number_input("Enter amount to withdraw", min_value=0, value=0, step=100)
+    if st.button("Wi
