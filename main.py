@@ -1,73 +1,86 @@
+# bank_account_app.py
 import streamlit as st
 
-# 🏦 Bank Account Class (OOP)
+# ------------------ OOP CLASS ------------------
 class BankAccount:
-    def __init__(self, name, acc_number, balance=0):
-        """Initialize account details."""
-        self.name = name
-        self.acc_number = acc_number
+    def __init__(self, username, password, balance=0):
+        self.username = username
+        self.password = password
         self.balance = balance
 
     def deposit(self, amount):
-        """Deposit money into the account."""
-        self.balance += amount
-        return f"✅ Deposited ₹{amount}. New Balance: ₹{self.balance}"
+        if amount > 0:
+            self.balance += amount
+            return f"Deposited ₹{amount}. New Balance: ₹{self.balance}"
+        else:
+            return "Deposit amount must be greater than 0."
 
     def withdraw(self, amount):
-        """Withdraw money if sufficient balance exists."""
-        if amount <= self.balance:
-            self.balance -= amount
-            return f"💸 Withdrew ₹{amount}. New Balance: ₹{self.balance}"
+        if amount <= 0:
+            return "Withdrawal amount must be greater than 0."
+        elif amount > self.balance:
+            return "Insufficient balance."
         else:
-            return "❌ Insufficient Balance!"
+            self.balance -= amount
+            return f"Withdrew ₹{amount}. New Balance: ₹{self.balance}"
 
-    def show_balance(self):
-        """Return current balance."""
-        return f"📌 {self.name}'s Account Balance: ₹{self.balance}"
+    def check_balance(self):
+        return f"Your current balance is ₹{self.balance}"
 
+# ------------------ DEFAULT USER DATABASE ------------------
+# For demo purposes, storing in a dictionary (username: BankAccount)
+users_db = {
+    "tejal": BankAccount("tejal", "1234", 1000),
+    "admin": BankAccount("admin", "admin123", 5000),
+}
 
-# ---------------------------
-# STREAMLIT APP START
-# ---------------------------
-st.set_page_config(page_title="Bank Account System", page_icon="🏦")
+# ------------------ STREAMLIT APP ------------------
+st.set_page_config(page_title="Bank Account App", page_icon="🏦")
+
+# Session state
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.current_user = None
 
 st.title("🏦 Simple Bank Account System")
-st.write("A small interactive app to simulate deposits, withdrawals, and balance checks.")
 
-# Store account object in session state so it persists
-if "account" not in st.session_state:
-    st.session_state.account = None
-
-# Create account form
-if st.session_state.account is None:
-    st.subheader("Create Your Bank Account")
-    name = st.text_input("Enter Account Holder Name")
-    acc_number = st.text_input("Enter Account Number")
-    balance = st.number_input("Initial Balance (₹)", min_value=0, value=0, step=100)
-
-    if st.button("Create Account"):
-        if name and acc_number:
-            st.session_state.account = BankAccount(name, acc_number, balance)
-            st.success(f"✅ Account created for {name} with balance ₹{balance}")
+# ------------------ LOGIN ------------------
+if not st.session_state.logged_in:
+    st.subheader("🔐 Login to Your Account")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    
+    if st.button("Login"):
+        if username in users_db and users_db[username].password == password:
+            st.session_state.logged_in = True
+            st.session_state.current_user = users_db[username]
+            st.success(f"Welcome {username}!")
         else:
-            st.warning("Please enter both name and account number.")
-
-# Show account actions if account exists
+            st.error("Invalid username or password.")
 else:
-    st.subheader(f"Welcome, {st.session_state.account.name}!")
-    st.write(st.session_state.account.show_balance())
+    # ------------------ BANK OPERATIONS ------------------
+    st.success(f"Welcome {st.session_state.current_user.username}!")
 
-    # Deposit money
-    st.write("### 💰 Deposit Money")
-    deposit_amount = st.number_input("Enter amount to deposit", min_value=0, value=0, step=100)
-    if st.button("Deposit"):
-        if deposit_amount > 0:
-            result = st.session_state.account.deposit(deposit_amount)
-            st.success(result)
-        else:
-            st.warning("Please enter an amount greater than ₹0.")
+    menu = st.radio("Select an Operation", ["Deposit", "Withdraw", "Check Balance", "Logout"])
 
-    # Withdraw money
-    st.write("### 💸 Withdraw Money")
-    withdraw_amount = st.number_input("Enter amount to withdraw", min_value=0, value=0, step=100)
-    if st.button("Wi
+    if menu == "Deposit":
+        amount = st.number_input("Enter amount to deposit", min_value=1)
+        if st.button("Deposit Money"):
+            msg = st.session_state.current_user.deposit(amount)
+            st.info(msg)
+
+    elif menu == "Withdraw":
+        amount = st.number_input("Enter amount to withdraw", min_value=1)
+        if st.button("Withdraw Money"):
+            msg = st.session_state.current_user.withdraw(amount)
+            st.info(msg)
+
+    elif menu == "Check Balance":
+        if st.button("Show Balance"):
+            msg = st.session_state.current_user.check_balance()
+            st.info(msg)
+
+    elif menu == "Logout":
+        st.session_state.logged_in = False
+        st.session_state.current_user = None
+        st.success("You have been logged out.")
