@@ -1,86 +1,112 @@
-# bank_account_app.py
+# bank_app.py
 import streamlit as st
+from datetime import datetime
 
 # ------------------ OOP CLASS ------------------
+
 class BankAccount:
-    def __init__(self, username, password, balance=0):
-        self.username = username
-        self.password = password
+    def __init__(self, name, acc_number, balance=0):
+        self.name = name
+        self.acc_number = acc_number
         self.balance = balance
+        self.transactions = []
 
     def deposit(self, amount):
-        if amount > 0:
-            self.balance += amount
-            return f"Deposited ₹{amount}. New Balance: ₹{self.balance}"
-        else:
-            return "Deposit amount must be greater than 0."
+        self.balance += amount
+        self.transactions.append((datetime.now(), f"Deposited ₹{amount}"))
+        return f"Deposited ₹{amount}. New Balance: ₹{self.balance}"
 
     def withdraw(self, amount):
-        if amount <= 0:
-            return "Withdrawal amount must be greater than 0."
-        elif amount > self.balance:
-            return "Insufficient balance."
-        else:
-            self.balance -= amount
-            return f"Withdrew ₹{amount}. New Balance: ₹{self.balance}"
+        if amount > self.balance:
+            return "❌ Insufficient balance!"
+        self.balance -= amount
+        self.transactions.append((datetime.now(), f"Withdrew ₹{amount}"))
+        return f"Withdrew ₹{amount}. New Balance: ₹{self.balance}"
 
-    def check_balance(self):
-        return f"Your current balance is ₹{self.balance}"
+    def get_balance(self):
+        return self.balance
 
-# ------------------ DEFAULT USER DATABASE ------------------
-# For demo purposes, storing in a dictionary (username: BankAccount)
-users_db = {
-    "tejal": BankAccount("tejal", "1234", 1000),
-    "admin": BankAccount("admin", "admin123", 5000),
-}
+    def get_details(self):
+        return {
+            "Holder Name": self.name,
+            "Account Number": self.acc_number,
+            "Balance": self.balance
+        }
+
+    def get_transactions(self):
+        return self.transactions
 
 # ------------------ STREAMLIT APP ------------------
+
 st.set_page_config(page_title="Bank Account App", page_icon="🏦")
 
-# Session state
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.current_user = None
+# Session state for account
+if "account" not in st.session_state:
+    st.session_state.account = None
 
-st.title("🏦 Simple Bank Account System")
+st.title("🏦 Simple Bank Account Management")
 
-# ------------------ LOGIN ------------------
-if not st.session_state.logged_in:
-    st.subheader("🔐 Login to Your Account")
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    if st.button("Login"):
-        if username in users_db and users_db[username].password == password:
-            st.session_state.logged_in = True
-            st.session_state.current_user = users_db[username]
-            st.success(f"Welcome {username}!")
+menu = st.sidebar.radio("Navigation", ["Create Account", "Account Details", "Deposit", "Withdraw", "Transactions"])
+
+# Create Account
+if menu == "Create Account":
+    st.header("Open a New Bank Account")
+    name = st.text_input("Enter Account Holder Name")
+    acc_number = st.text_input("Enter Account Number")
+    balance = st.number_input("Initial Deposit", min_value=0, step=100)
+
+    if st.button("Create Account"):
+        if name and acc_number:
+            st.session_state.account = BankAccount(name, acc_number, balance)
+            st.success(f"✅ Account Created Successfully for {name}")
         else:
-            st.error("Invalid username or password.")
-else:
-    # ------------------ BANK OPERATIONS ------------------
-    st.success(f"Welcome {st.session_state.current_user.username}!")
+            st.error("Please fill all details!")
 
-    menu = st.radio("Select an Operation", ["Deposit", "Withdraw", "Check Balance", "Logout"])
+# Show Account Details
+elif menu == "Account Details":
+    st.header("📄 Account Information")
+    if st.session_state.account:
+        details = st.session_state.account.get_details()
+        st.write(f"**Holder Name:** {details['Holder Name']}")
+        st.write(f"**Account Number:** {details['Account Number']}")
+        st.write(f"**Balance:** ₹{details['Balance']}")
+    else:
+        st.warning("No account found. Please create one.")
 
-    if menu == "Deposit":
-        amount = st.number_input("Enter amount to deposit", min_value=1)
-        if st.button("Deposit Money"):
-            msg = st.session_state.current_user.deposit(amount)
-            st.info(msg)
+# Deposit Money
+elif menu == "Deposit":
+    st.header("💰 Deposit Money")
+    if st.session_state.account:
+        amount = st.number_input("Enter amount to deposit", min_value=1, step=100)
+        if st.button("Deposit"):
+            message = st.session_state.account.deposit(amount)
+            st.success(message)
+    else:
+        st.warning("Please create an account first.")
 
-    elif menu == "Withdraw":
-        amount = st.number_input("Enter amount to withdraw", min_value=1)
-        if st.button("Withdraw Money"):
-            msg = st.session_state.current_user.withdraw(amount)
-            st.info(msg)
+# Withdraw Money
+elif menu == "Withdraw":
+    st.header("💳 Withdraw Money")
+    if st.session_state.account:
+        amount = st.number_input("Enter amount to withdraw", min_value=1, step=100)
+        if st.button("Withdraw"):
+            message = st.session_state.account.withdraw(amount)
+            if "❌" in message:
+                st.error(message)
+            else:
+                st.success(message)
+    else:
+        st.warning("Please create an account first.")
 
-    elif menu == "Check Balance":
-        if st.button("Show Balance"):
-            msg = st.session_state.current_user.check_balance()
-            st.info(msg)
-
-    elif menu == "Logout":
-        st.session_state.logged_in = False
-        st.session_state.current_user = None
-        st.success("You have been logged out.")
+# Transaction History
+elif menu == "Transactions":
+    st.header("📜 Transaction History")
+    if st.session_state.account:
+        transactions = st.session_state.account.get_transactions()
+        if transactions:
+            for date, action in transactions:
+                st.write(f"{date.strftime('%Y-%m-%d %H:%M:%S')} - {action}")
+        else:
+            st.info("No transactions yet.")
+    else:
+        st.warning("Please create an account first.")
